@@ -37,7 +37,7 @@ public class InterfazGrafica extends Application {
         tablaPersonas = crearTablaPersonas();
         listaTelefonos = new ListView<>(telefonos);
 
-        Button btnRefrescar = new Button("Refrescar");
+        Button btnRefrescar = new Button("Actualizar");
         btnRefrescar.setOnAction(e -> refrescarPersonas());
 
         Button btnNuevo = new Button("Nuevo");
