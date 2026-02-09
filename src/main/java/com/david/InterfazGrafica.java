@@ -2,19 +2,22 @@ package com.david;
 
 import com.david.dao.PersonaDao;
 import com.david.dao.TelefonoDao;
+import com.david.logica.DireccionLogica;
+import com.david.logica.PersonaLogica;
+import com.david.modelo.Direccion;
 import com.david.modelo.Persona;
 import com.david.modelo.Telefono;
-import com.david.logica.PersonaLogica;
 import javafx.application.Application;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.scene.Node;
-
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,16 +29,21 @@ public class InterfazGrafica extends Application {
     private final TelefonoDao telefonoDao = new TelefonoDao();
     private final PersonaLogica personaService = new PersonaLogica();
 
+    private final DireccionLogica direccionService = new DireccionLogica();
+
     private final ObservableList<Persona> personas = FXCollections.observableArrayList();
     private final ObservableList<Telefono> telefonos = FXCollections.observableArrayList();
+    private final ObservableList<Direccion> direcciones = FXCollections.observableArrayList();
 
     private TableView<Persona> tablaPersonas;
     private ListView<Telefono> listaTelefonos;
+    private ListView<Direccion> listaDirecciones;
 
     @Override
     public void start(Stage stage) {
         tablaPersonas = crearTablaPersonas();
         listaTelefonos = new ListView<>(telefonos);
+        listaDirecciones = new ListView<>(direcciones);
 
         Button btnRefrescar = new Button("Actualizar");
         btnRefrescar.setOnAction(e -> refrescarPersonas());
@@ -56,9 +64,29 @@ public class InterfazGrafica extends Application {
         panelIzq.setPadding(new Insets(10));
         VBox.setVgrow(tablaPersonas, Priority.ALWAYS);
 
-        VBox panelDer = new VBox(10, new Label("Teléfonos de la persona seleccionada"), listaTelefonos);
+        Button btnDirAgregar = new Button("Agregar dirección");
+        btnDirAgregar.setOnAction(e -> agregarDireccionNueva());
+
+        Button btnDirAsociar = new Button("Asociar dirección existente");
+        btnDirAsociar.setOnAction(e -> asociarDireccionExistente());
+
+        Button btnDirQuitar = new Button("Quitar dirección");
+        btnDirQuitar.setOnAction(e -> quitarDireccion());
+
+        HBox barraDirecciones = new HBox(10, btnDirAgregar, btnDirAsociar, btnDirQuitar);
+
+        VBox panelDer = new VBox(
+                10,
+                new Label("Teléfonos de la persona seleccionada"),
+                listaTelefonos,
+                new Separator(),
+                new Label("Direcciones de la persona seleccionada"),
+                listaDirecciones,
+                barraDirecciones
+        );
         panelDer.setPadding(new Insets(10));
         VBox.setVgrow(listaTelefonos, Priority.ALWAYS);
+        VBox.setVgrow(listaDirecciones, Priority.ALWAYS);
 
         SplitPane split = new SplitPane(panelIzq, panelDer);
         split.setDividerPositions(0.65);
@@ -67,13 +95,18 @@ public class InterfazGrafica extends Application {
         root.setTop(barra);
         root.setCenter(split);
 
-        stage.setTitle("Agenda - Personas y Teléfonos");
+        stage.setTitle("Agenda - Personas, Teléfonos y Direcciones");
         stage.setScene(new Scene(root, 900, 550));
         stage.show();
 
         tablaPersonas.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
-            if (newV != null) cargarTelefonosDe(newV.getId());
-            else telefonos.clear();
+            if (newV != null) {
+                cargarTelefonosDe(newV.getId());
+                cargarDireccionesDe(newV.getId());
+            } else {
+                telefonos.clear();
+                direcciones.clear();
+            }
         });
 
         refrescarPersonas();
@@ -83,15 +116,15 @@ public class InterfazGrafica extends Application {
         TableView<Persona> tv = new TableView<>(personas);
 
         TableColumn<Persona, Number> colId = new TableColumn<>("ID");
-        colId.setCellValueFactory(c -> new javafx.beans.property.SimpleIntegerProperty(c.getValue().getId()));
+        colId.setCellValueFactory(c -> new SimpleIntegerProperty(c.getValue().getId()));
         colId.setPrefWidth(70);
 
         TableColumn<Persona, String> colNombre = new TableColumn<>("Nombre");
-        colNombre.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getNombre()));
+        colNombre.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getNombre()));
         colNombre.setPrefWidth(250);
 
-        TableColumn<Persona, String> colDir = new TableColumn<>("Dirección");
-        colDir.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().getDireccion()));
+        TableColumn<Persona, String> colDir = new TableColumn<>("Dirección Principal");
+        colDir.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getDireccion()));
         colDir.setPrefWidth(350);
 
         tv.getColumns().addAll(colId, colNombre, colDir);
@@ -116,6 +149,14 @@ public class InterfazGrafica extends Application {
         }
     }
 
+    private void cargarDireccionesDe(int personaId) {
+        try {
+            direcciones.setAll(direccionService.obtenerDireccionesDePersona(personaId));
+        } catch (Exception ex) {
+            error("Error al cargar direcciones", ex.getMessage());
+        }
+    }
+
     private void crearPersona() {
         Optional<FormResult> r = mostrarFormulario(null);
         if (r.isEmpty()) return;
@@ -126,8 +167,15 @@ public class InterfazGrafica extends Application {
                     r.get().direccion,
                     r.get().telefonos
             );
+
+            if (r.get().direccion != null && !r.get().direccion.trim().isEmpty()) {
+                direccionService.agregarDireccionAPersona(id, r.get().direccion.trim());
+            }
+
             refrescarPersonas();
             seleccionarPersonaPorId(id);
+            cargarDireccionesDe(id);
+
         } catch (Exception ex) {
             error("No se pudo crear", ex.getMessage());
         }
@@ -153,8 +201,14 @@ public class InterfazGrafica extends Application {
                     r.get().direccion,
                     r.get().telefonos
             );
+            if (r.get().direccion != null && !r.get().direccion.trim().isEmpty()) {
+                direccionService.agregarDireccionAPersona(sel.getId(), r.get().direccion.trim());
+            }
+
             refrescarPersonas();
             seleccionarPersonaPorId(sel.getId());
+            cargarDireccionesDe(sel.getId());
+
         } catch (Exception ex) {
             error("No se pudo actualizar", ex.getMessage());
         }
@@ -170,7 +224,7 @@ public class InterfazGrafica extends Application {
         Alert a = new Alert(Alert.AlertType.CONFIRMATION);
         a.setTitle("Confirmar");
         a.setHeaderText("¿Eliminar a " + sel.getNombre() + "?");
-        a.setContentText("Se eliminarán también sus teléfonos (CASCADE).");
+        a.setContentText("Se eliminarán también sus teléfonos y asociaciones de direcciones (CASCADE).");
         Optional<ButtonType> ok = a.showAndWait();
         if (ok.isEmpty() || ok.get() != ButtonType.OK) return;
 
@@ -189,6 +243,90 @@ public class InterfazGrafica extends Application {
                 tablaPersonas.scrollTo(p);
                 return;
             }
+        }
+    }
+
+    private void agregarDireccionNueva() {
+        Persona sel = tablaPersonas.getSelectionModel().getSelectedItem();
+        if (sel == null) {
+            info("Aviso", "Selecciona una persona primero.");
+            return;
+        }
+
+        TextInputDialog d = new TextInputDialog();
+        d.setTitle("Agregar dirección");
+        d.setHeaderText("Nueva dirección para " + sel.getNombre());
+        d.setContentText("Descripción:");
+
+        Optional<String> r = d.showAndWait();
+        if (r.isEmpty()) return;
+
+        String desc = r.get().trim();
+        if (desc.isEmpty()) return;
+
+        try {
+            direccionService.agregarDireccionAPersona(sel.getId(), desc);
+            cargarDireccionesDe(sel.getId());
+        } catch (Exception ex) {
+            error("No se pudo agregar dirección", ex.getMessage());
+        }
+    }
+
+    private void asociarDireccionExistente() {
+        Persona sel = tablaPersonas.getSelectionModel().getSelectedItem();
+        if (sel == null) {
+            info("Aviso", "Selecciona una persona primero.");
+            return;
+        }
+
+        try {
+            List<Direccion> disponibles = direccionService.listarDirecciones();
+            if (disponibles.isEmpty()) {
+                info("Aviso", "No hay direcciones registradas aún.");
+                return;
+            }
+
+            ChoiceDialog<Direccion> dialog = new ChoiceDialog<>(disponibles.get(0), disponibles);
+            dialog.setTitle("Asociar dirección existente");
+            dialog.setHeaderText("Selecciona una dirección para asociarla a " + sel.getNombre());
+            dialog.setContentText("Dirección:");
+
+            Optional<Direccion> r = dialog.showAndWait();
+            if (r.isEmpty()) return;
+            direccionService.agregarDireccionAPersona(sel.getId(), r.get().getDescripcion());
+            cargarDireccionesDe(sel.getId());
+
+        } catch (Exception ex) {
+            error("No se pudo asociar", ex.getMessage());
+        }
+    }
+
+    private void quitarDireccion() {
+        Persona sel = tablaPersonas.getSelectionModel().getSelectedItem();
+        if (sel == null) {
+            info("Aviso", "Selecciona una persona primero.");
+            return;
+        }
+
+        Direccion dirSel = listaDirecciones.getSelectionModel().getSelectedItem();
+        if (dirSel == null) {
+            info("Aviso", "Selecciona una dirección para quitar.");
+            return;
+        }
+
+        Alert a = new Alert(Alert.AlertType.CONFIRMATION);
+        a.setTitle("Confirmar");
+        a.setHeaderText("¿Quitar esta dirección de " + sel.getNombre() + "?");
+        a.setContentText(dirSel.getDescripcion());
+
+        Optional<ButtonType> ok = a.showAndWait();
+        if (ok.isEmpty() || ok.get() != ButtonType.OK) return;
+
+        try {
+            direccionService.quitarDireccionDePersona(sel.getId(), dirSel.getId());
+            cargarDireccionesDe(sel.getId());
+        } catch (Exception ex) {
+            error("No se pudo quitar dirección", ex.getMessage());
         }
     }
 
@@ -234,8 +372,7 @@ public class InterfazGrafica extends Application {
 
         gp.add(new Label("Nombre*"), 0, 0);
         gp.add(txtNombre, 1, 0);
-
-        gp.add(new Label("Dirección"), 0, 1);
+        gp.add(new Label("Dirección (texto)"), 0, 1);
         gp.add(txtDireccion, 1, 1);
 
         gp.add(new Label("Teléfonos"), 0, 2);
@@ -268,7 +405,6 @@ public class InterfazGrafica extends Application {
         return dialog.showAndWait();
     }
 
-    // ---------- Alerts ----------
     private void info(String titulo, String msg) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
         a.setTitle(titulo);

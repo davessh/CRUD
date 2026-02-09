@@ -11,7 +11,7 @@ public class Persona {
     public Persona(int id, String nombre, String direccion) {
         this.id = id;
         this.nombre = nombre;
-        this.direccion = direccion;
+        //this.direccion = direccion;
     }
 
     public int getId() {
@@ -28,15 +28,16 @@ public class Persona {
         this.nombre = nombre;
     }
     public String getDireccion() {
-        return direccion;
+       return direccion;
     }
+
     public void setDireccion(String direccion) {
         this.direccion = direccion;
     }
 
     @Override
     public String toString() {
-        return id + " " + nombre + " " + direccion;
+        return id + " " + nombre;
     }
 }
 
