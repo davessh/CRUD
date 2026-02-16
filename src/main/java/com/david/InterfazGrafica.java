@@ -1,9 +1,6 @@
 package com.david;
 
-import com.david.dao.PersonaDao;
-import com.david.dao.TelefonoDao;
-import com.david.logica.DireccionLogica;
-import com.david.logica.PersonaLogica;
+import com.david.controlador.PersonaController;
 import com.david.modelo.Direccion;
 import com.david.modelo.Persona;
 import com.david.modelo.Telefono;
@@ -25,11 +22,8 @@ import java.util.Optional;
 
 public class InterfazGrafica extends Application {
 
-    private final PersonaDao personaDao = new PersonaDao();
-    private final TelefonoDao telefonoDao = new TelefonoDao();
-    private final PersonaLogica personaService = new PersonaLogica();
 
-    private final DireccionLogica direccionService = new DireccionLogica();
+    private final PersonaController controller = new PersonaController();
 
     private final ObservableList<Persona> personas = FXCollections.observableArrayList();
     private final ObservableList<Telefono> telefonos = FXCollections.observableArrayList();
@@ -134,7 +128,7 @@ public class InterfazGrafica extends Application {
 
     private void refrescarPersonas() {
         try {
-            personas.setAll(personaDao.obtenerTodas());
+            personas.setAll(controller.personaDao().obtenerTodas());
             if (!personas.isEmpty()) tablaPersonas.getSelectionModel().select(0);
         } catch (Exception ex) {
             error("Error al cargar personas", ex.getMessage());
@@ -143,7 +137,7 @@ public class InterfazGrafica extends Application {
 
     private void cargarTelefonosDe(int personaId) {
         try {
-            telefonos.setAll(telefonoDao.obtenerPorPersona(personaId));
+            telefonos.setAll(controller.telefonoDao().obtenerPorPersona(personaId));
         } catch (Exception ex) {
             error("Error al cargar teléfonos", ex.getMessage());
         }
@@ -151,7 +145,7 @@ public class InterfazGrafica extends Application {
 
     private void cargarDireccionesDe(int personaId) {
         try {
-            direcciones.setAll(direccionService.obtenerDireccionesDePersona(personaId));
+            direcciones.setAll(controller.direccionService().obtenerDireccionesDePersona(personaId));
         } catch (Exception ex) {
             error("Error al cargar direcciones", ex.getMessage());
         }
@@ -162,15 +156,11 @@ public class InterfazGrafica extends Application {
         if (r.isEmpty()) return;
 
         try {
-            int id = personaService.crearPersonaConTelefonos(
+            int id = controller.service().crear(
                     r.get().nombre,
                     r.get().direccion,
                     r.get().telefonos
             );
-
-            if (r.get().direccion != null && !r.get().direccion.trim().isEmpty()) {
-                direccionService.agregarDireccionAPersona(id, r.get().direccion.trim());
-            }
 
             refrescarPersonas();
             seleccionarPersonaPorId(id);
@@ -195,15 +185,12 @@ public class InterfazGrafica extends Application {
         if (r.isEmpty()) return;
 
         try {
-            personaService.actualizarPersonaConTelefonos(
+            controller.service().actualizar(
                     sel.getId(),
                     r.get().nombre,
                     r.get().direccion,
                     r.get().telefonos
             );
-            if (r.get().direccion != null && !r.get().direccion.trim().isEmpty()) {
-                direccionService.agregarDireccionAPersona(sel.getId(), r.get().direccion.trim());
-            }
 
             refrescarPersonas();
             seleccionarPersonaPorId(sel.getId());
@@ -229,7 +216,7 @@ public class InterfazGrafica extends Application {
         if (ok.isEmpty() || ok.get() != ButtonType.OK) return;
 
         try {
-            personaDao.eliminar(sel.getId());
+            controller.service().eliminar(sel.getId());
             refrescarPersonas();
         } catch (Exception ex) {
             error("No se pudo eliminar", ex.getMessage());
@@ -265,7 +252,7 @@ public class InterfazGrafica extends Application {
         if (desc.isEmpty()) return;
 
         try {
-            direccionService.agregarDireccionAPersona(sel.getId(), desc);
+            controller.direccionService().agregarDireccionAPersona(sel.getId(), desc);
             cargarDireccionesDe(sel.getId());
         } catch (Exception ex) {
             error("No se pudo agregar dirección", ex.getMessage());
@@ -280,7 +267,7 @@ public class InterfazGrafica extends Application {
         }
 
         try {
-            List<Direccion> disponibles = direccionService.listarDirecciones();
+            List<Direccion> disponibles = controller.direccionService().listarDirecciones();
             if (disponibles.isEmpty()) {
                 info("Aviso", "No hay direcciones registradas aún.");
                 return;
@@ -293,7 +280,8 @@ public class InterfazGrafica extends Application {
 
             Optional<Direccion> r = dialog.showAndWait();
             if (r.isEmpty()) return;
-            direccionService.agregarDireccionAPersona(sel.getId(), r.get().getDescripcion());
+
+            controller.direccionService().agregarDireccionAPersona(sel.getId(), r.get().getDescripcion());
             cargarDireccionesDe(sel.getId());
 
         } catch (Exception ex) {
@@ -323,7 +311,7 @@ public class InterfazGrafica extends Application {
         if (ok.isEmpty() || ok.get() != ButtonType.OK) return;
 
         try {
-            direccionService.quitarDireccionDePersona(sel.getId(), dirSel.getId());
+            controller.direccionService().quitarDireccionDePersona(sel.getId(), dirSel.getId());
             cargarDireccionesDe(sel.getId());
         } catch (Exception ex) {
             error("No se pudo quitar dirección", ex.getMessage());
@@ -343,6 +331,7 @@ public class InterfazGrafica extends Application {
         ObservableList<String> tels = FXCollections.observableArrayList(
                 base == null ? List.of() : base.telefonos
         );
+
         ListView<String> list = new ListView<>(tels);
         list.setPrefHeight(120);
 
@@ -382,7 +371,6 @@ public class InterfazGrafica extends Application {
         gp.add(filaTel, 1, 3);
 
         dialog.getDialogPane().setContent(gp);
-
         Node guardarNode = dialog.getDialogPane().lookupButton(btnGuardar);
         guardarNode.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
             if (txtNombre.getText() == null || txtNombre.getText().trim().isEmpty()) {

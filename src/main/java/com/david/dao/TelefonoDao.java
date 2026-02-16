@@ -98,5 +98,26 @@ public class TelefonoDao {
             }
         }
     }
+
+    public void reemplazarTelefonos(Connection con, int personaId, List<String> telefonos) throws SQLException {
+        try (PreparedStatement del = con.prepareStatement("DELETE FROM Telefonos WHERE personaId=?")) {
+            del.setInt(1, personaId);
+            del.executeUpdate();
+        }
+
+        if (telefonos == null || telefonos.isEmpty()) return;
+
+        try (PreparedStatement ins = con.prepareStatement(
+                "INSERT INTO Telefonos(personaId, telefono) VALUES (?, ?)")) {
+
+            for (String t : telefonos) {
+                if (t == null || t.trim().isEmpty()) continue;
+                ins.setInt(1, personaId);
+                ins.setString(2, t.trim());
+                ins.addBatch();
+            }
+            ins.executeBatch();
+        }
+    }
 }
 

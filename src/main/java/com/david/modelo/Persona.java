@@ -11,7 +11,7 @@ public class Persona {
     public Persona(int id, String nombre, String direccion) {
         this.id = id;
         this.nombre = nombre;
-        //this.direccion = direccion;
+        this.direccion = direccion;
     }
 
     public int getId() {
