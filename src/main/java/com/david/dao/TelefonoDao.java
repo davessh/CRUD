@@ -1,4 +1,5 @@
 package com.david.dao;
+
 import com.david.db.ConnectionFactory;
 import com.david.modelo.Telefono;
 
@@ -6,15 +7,20 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TelefonoDao {
+public class TelefonoDao implements ContactoDao<Telefono> {
 
     public List<Telefono> obtenerPorPersona(int personaId) throws SQLException {
+        try (Connection con = ConnectionFactory.getConnection()) {
+            return obtenerPorPersona(con, personaId);
+        }
+    }
+
+    @Override
+    public List<Telefono> obtenerPorPersona(Connection con, int personaId) throws SQLException {
         String sql = "SELECT id, personaId, telefono FROM Telefonos WHERE personaId=? ORDER BY id";
         List<Telefono> lista = new ArrayList<>();
 
-        try (Connection con = ConnectionFactory.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, personaId);
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -28,6 +34,28 @@ public class TelefonoDao {
             }
         }
         return lista;
+    }
+
+    @Override
+    public void reemplazar(Connection con, int personaId, List<String> telefonos) throws SQLException {
+        try (PreparedStatement del = con.prepareStatement("DELETE FROM Telefonos WHERE personaId=?")) {
+            del.setInt(1, personaId);
+            del.executeUpdate();
+        }
+
+        if (telefonos == null || telefonos.isEmpty()) return;
+
+        try (PreparedStatement ins = con.prepareStatement(
+                "INSERT INTO Telefonos(personaId, telefono) VALUES (?, ?)")) {
+
+            for (String t : telefonos) {
+                if (t == null || t.trim().isEmpty()) continue;
+                ins.setInt(1, personaId);
+                ins.setString(2, t.trim());
+                ins.addBatch();
+            }
+            ins.executeBatch();
+        }
     }
 
     public int insertar(int personaId, String telefono) throws SQLException {
@@ -69,55 +97,4 @@ public class TelefonoDao {
             ps.executeUpdate();
         }
     }
-
-    public void reemplazarTelefonos(int personaId, List<String> telefonos) throws SQLException {
-        try (Connection con = ConnectionFactory.getConnection()) {
-            con.setAutoCommit(false);
-            try {
-                try (PreparedStatement del = con.prepareStatement("DELETE FROM Telefonos WHERE personaId=?")) {
-                    del.setInt(1, personaId);
-                    del.executeUpdate();
-                }
-
-                try (PreparedStatement ins = con.prepareStatement(
-                        "INSERT INTO Telefonos(personaId, telefono) VALUES (?, ?)")) {
-                    for (String t : telefonos) {
-                        ins.setInt(1, personaId);
-                        ins.setString(2, t);
-                        ins.addBatch();
-                    }
-                    ins.executeBatch();
-                }
-
-                con.commit();
-            } catch (Exception e) {
-                con.rollback();
-                throw e;
-            } finally {
-                con.setAutoCommit(true);
-            }
-        }
-    }
-
-    public void reemplazarTelefonos(Connection con, int personaId, List<String> telefonos) throws SQLException {
-        try (PreparedStatement del = con.prepareStatement("DELETE FROM Telefonos WHERE personaId=?")) {
-            del.setInt(1, personaId);
-            del.executeUpdate();
-        }
-
-        if (telefonos == null || telefonos.isEmpty()) return;
-
-        try (PreparedStatement ins = con.prepareStatement(
-                "INSERT INTO Telefonos(personaId, telefono) VALUES (?, ?)")) {
-
-            for (String t : telefonos) {
-                if (t == null || t.trim().isEmpty()) continue;
-                ins.setInt(1, personaId);
-                ins.setString(2, t.trim());
-                ins.addBatch();
-            }
-            ins.executeBatch();
-        }
-    }
 }
-

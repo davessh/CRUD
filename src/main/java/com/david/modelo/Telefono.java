@@ -1,6 +1,8 @@
 package com.david.modelo;
 
-public class Telefono {
+import java.io.Serializable;
+
+public class Telefono implements Contacto {
     private int id;
     private int personaId;
     private String telefono;
@@ -26,4 +28,10 @@ public class Telefono {
     public String toString() {
         return id + " | personaId=" + personaId + " | " + telefono;
     }
+
+    @Override
+    public String getEtiqueta() { return "Teléfono"; }
+
+    @Override
+    public String getValor() { return telefono; }
 }

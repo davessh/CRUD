@@ -74,10 +74,6 @@ public class DireccionDao {
         return direcciones;
     }
 
-    /**
-     * Si ya existe una dirección con esa descripción, regresa su id.
-     * Si no existe, la crea y regresa el nuevo id.
-     */
     public long encontrarOCrear(String descripcion) throws SQLException {
         Direccion existente = buscarPorDescripcion(descripcion);
         if (existente != null) return existente.getId();
@@ -85,7 +81,7 @@ public class DireccionDao {
         try {
             return insertar(new Direccion(descripcion));
         } catch (SQLIntegrityConstraintViolationException e) {
-            // Por si dos procesos intentan insertar lo mismo al mismo tiempo.
+
             Direccion d2 = buscarPorDescripcion(descripcion);
             if (d2 != null) return d2.getId();
             throw e;
