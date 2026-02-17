@@ -108,4 +108,17 @@ public class PersonaLogica {
             }
         }
     }
+    // Dentro de PersonaService (o PersonaLogica)
+    public int crear(String nombre, String direccion, java.util.List<String> telefonos) throws Exception {
+        return crearPersonaConTelefonos(nombre, direccion, telefonos); // si existe
+    }
+
+    public void actualizar(int personaId, String nombre, String direccion, java.util.List<String> telefonos) throws Exception {
+        actualizarPersonaConTelefonos(personaId, nombre, direccion, telefonos); // si existe
+    }
+
+    public void eliminar(int personaId) throws Exception {
+        // si ya tienes PersonaDao, puedes usarlo aquí con tx; si no, hazlo directo por ahora:
+        new com.david.dao.PersonaDao().eliminar(personaId);
+    }
 }

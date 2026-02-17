@@ -1,37 +1,38 @@
 package com.david.controlador;
 
-import com.david.dao.*;
-import com.david.db.*;
+import com.david.dao.PersonaDao;
+import com.david.dao.TelefonoDao;
 import com.david.logica.DireccionLogica;
-import com.david.servicio.*;
+import com.david.servicio.PersonaService;
+import com.david.servicio.TransactionManager;
 import com.david.validacion.PersonaValidator;
 
 public class PersonaController {
 
-    private final PersonaService personaService;
-    private final PersonaRepository personaRepo;
+    private final PersonaDao personaDao;
     private final TelefonoDao telefonoDao;
     private final DireccionLogica direccionService;
+    private final PersonaService personaService;
 
     public PersonaController() {
-        ConnectionProvider provider = new MariaDbConnectionProvider();
-        TransactionManager tx = new TransactionManager(provider);
-
-        this.personaRepo = new PersonaDao();   // implementación concreta de la abstracción
-        this.telefonoDao = new TelefonoDao();  // implementación concreta de ContactoDao
+        this.personaDao = new PersonaDao();
+        this.telefonoDao = new TelefonoDao();
         this.direccionService = new DireccionLogica();
 
         this.personaService = new PersonaService(
-                personaRepo,
+                personaDao,
                 telefonoDao,
                 direccionService,
                 new PersonaValidator(),
-                tx
+                new TransactionManager()
         );
     }
 
     public PersonaService service() { return personaService; }
-    public PersonaRepository personaRepo() { return personaRepo; }
+
+    public PersonaDao personaDao() { return personaDao; }
+
     public TelefonoDao telefonoDao() { return telefonoDao; }
+
     public DireccionLogica direccionService() { return direccionService; }
 }
