@@ -1,7 +1,6 @@
 package com.david.servicio;
 
-import com.david.db.ConnectionFactory;
-
+import com.david.db.ConnectionProvider;
 import java.sql.Connection;
 
 public class TransactionManager {
@@ -11,8 +10,14 @@ public class TransactionManager {
         T execute(Connection con) throws Exception;
     }
 
+    private final ConnectionProvider provider;
+
+    public TransactionManager(ConnectionProvider provider) {
+        this.provider = provider;
+    }
+
     public <T> T inTransaction(TxWork<T> work) throws Exception {
-        try (Connection con = ConnectionFactory.getConnection()) {
+        try (Connection con = provider.getConnection()) {
             con.setAutoCommit(false);
             try {
                 T result = work.execute(con);
